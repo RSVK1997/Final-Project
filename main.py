@@ -11,16 +11,6 @@ import os
 
 # Function to fetch stock data from Alpha Vantage API
 def fetch_stock_data(api_key, symbol):
-    """
-    Fetch stock data from Alpha Vantage API.
-
-    Parameters:
-    api_key (str): Alpha Vantage API key.
-    symbol (str): Stock symbol.
-
-    Returns:
-    dict: JSON response from the API containing stock data.
-    """
     api_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}'
     response = requests.get(api_url)
     data = response.json()
@@ -29,15 +19,6 @@ def fetch_stock_data(api_key, symbol):
 
 # Function to clean and process the data
 def clean_data(data):
-    """
-    Clean and process the stock data.
-
-    Parameters:
-    data (dict): JSON response from the API containing stock data.
-
-    Returns:
-    DataFrame: Cleaned and processed stock data.
-    """
     time_series = data.get('Time Series (Daily)')
     if not time_series:
         raise ValueError("Invalid data format received from API")
@@ -57,27 +38,11 @@ def clean_data(data):
 
 # Function to save data to a file
 def save_data_to_file(df, filename):
-    """
-    Save stock data to a CSV file.
-
-    Parameters:
-    df (DataFrame): Stock data.
-    filename (str): Name of the file to save the data.
-    """
     df.to_csv(filename, index=True)
 
 
 # Function to load data from a file
 def load_data_from_file(filename):
-    """
-    Load stock data from a CSV file.
-
-    Parameters:
-    filename (str): Name of the file to load the data from.
-
-    Returns:
-    DataFrame: Loaded stock data.
-    """
     if os.path.exists(filename):
         return pd.read_csv(filename, parse_dates=True, index_col=0)
     return None
@@ -85,21 +50,9 @@ def load_data_from_file(filename):
 
 # Function to get stock data and save to local file
 def get_stock_data(api_key, symbol):
-    """
-    Get stock data and save it to a local file.
-
-    Parameters:
-    api_key (str): Alpha Vantage API key.
-    symbol (str): Stock symbol.
-
-    Returns:
-    DataFrame: Cleaned and processed stock data.
-    """
     filename = f'{symbol}_data.csv'
 
-    # Try fetching data from API
     try:
-        # stock_data = load_data_from_file(filename)
         stock_data = fetch_stock_data(api_key, symbol)
         df = clean_data(stock_data)
         if not df.empty:
@@ -108,31 +61,29 @@ def get_stock_data(api_key, symbol):
         else:
             raise ValueError("Empty DataFrame")
 
-    # If API fails or returns empty DataFrame, load from file
     except (requests.RequestException, ValueError, KeyError) as e:
         print(f"Error fetching data from API: {e}. Loading from file.")
         return load_data_from_file(filename)
 
 
-# Function to perform regression analysis and add regression line to the graph
-def perform_regression(df, column):
-    """
-    Perform regression analysis and add regression line to the graph.
+# Function to perform multiple linear regression and add regression line to the graph
+def perform_multiple_regression(df):
+    X = df[['Open', 'High', 'Low']]
+    X = sm.add_constant(X)
+    y = df['Close']
 
-    Parameters:
-    df (DataFrame): Stock data.
-    column (str): Column name for regression analysis.
+    model = sm.OLS(y, X).fit()
+    predictions = model.predict(X)
 
-    Returns:
-    model: Regression model.
-    predictions: Predicted values from the regression model.
-    """
-    # Convert date index to ordinal for regression analysis
+    return model, predictions
+
+
+# Function to perform linear regression for a single column
+def perform_linear_regression(df, column):
     df['timestamp_ordinal'] = df.index.map(pd.Timestamp.toordinal)
     X = sm.add_constant(df['timestamp_ordinal'])
     y = df[column]
 
-    # Fit regression model
     model = sm.OLS(y, X).fit()
     predictions = model.predict(X)
 
@@ -140,14 +91,14 @@ def perform_regression(df, column):
 
 
 # Fetch and clean data for multiple stocks
-api_key = '2ZYMISYN89KDZ6CX'  # Replace with your Alpha Vantage API key
+api_key = 'OXR9HT66GVV909Z3'  # Replace with your Alpha Vantage API key
 symbols = ['IBM', 'AAPL', 'GOOGL', 'NVDA', 'MSFT']  # List of stock symbols to analyze
 data_frames = {symbol: get_stock_data(api_key, symbol) for symbol in symbols}
 
 # Create Dash app
 app = dash.Dash(__name__)
 
-# Layout of the dashboard with 2x2 view
+# Layout of the dashboard with 2x2 view and regression graph
 app.layout = html.Div([
     html.H1("Stock Market Dashboard"),
 
@@ -165,7 +116,9 @@ app.layout = html.Div([
     html.Div([
         dcc.Graph(id='high-graph'),
         dcc.Graph(id='low-graph')
-    ], style={'display': 'flex', 'flex-direction': 'row'})
+    ], style={'display': 'flex', 'flex-direction': 'row'}),
+
+    dcc.Graph(id='regression-graph')
 ])
 
 
@@ -174,35 +127,21 @@ app.layout = html.Div([
     [Output('open-close-graph', 'figure'),
      Output('volume-graph', 'figure'),
      Output('high-graph', 'figure'),
-     Output('low-graph', 'figure')],
+     Output('low-graph', 'figure'),
+     Output('regression-graph', 'figure')],
     [Input('stock-dropdown', 'value')]
 )
 def update_graphs(selected_stock):
-    """
-    Update graphs based on selected stock.
-
-    Parameters:
-    selected_stock (str): Selected stock symbol.
-
-    Returns:
-    fig_open_close: Bar graph for open and close prices.
-    fig_volume: Bar graph for trading volume.
-    fig_high: Scatter plot for daily high prices with regression line.
-    fig_low: Scatter plot for daily low prices with regression line.
-    """
-    # Get the dataframe for the selected stock
     df = data_frames[selected_stock]
 
-    # Bar graph for open and close prices
-    fig_open_close = go.Figure(data=[
-        go.Bar(name='Open', x=df.index, y=df['Open']),
-        go.Bar(name='Close', x=df.index, y=df['Close'])
-    ])
+    # Line graph for open and close prices
+    fig_open_close = go.Figure()
+    fig_open_close.add_trace(go.Scatter(x=df.index, y=df['Open'], mode='lines', name='Open'))
+    fig_open_close.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='lines', name='Close'))
     fig_open_close.update_layout(
         title=f'{selected_stock} Daily Open and Close Prices',
         xaxis_title='Date',
         yaxis_title='Price (USD)',
-        barmode='group',
         legend_title_text='Legend'
     )
 
@@ -215,7 +154,7 @@ def update_graphs(selected_stock):
     )
 
     # Scatter plot for daily high prices with regression line
-    model_high, predictions_high = perform_regression(df, 'High')
+    model_high, predictions_high = perform_linear_regression(df, 'High')
     fig_high = px.scatter(df, x=df.index, y='High', title=f'{selected_stock} Daily High Prices')
     fig_high.add_scatter(x=df.index, y=predictions_high, mode='lines', name='Regression Line')
     fig_high.update_layout(
@@ -225,7 +164,7 @@ def update_graphs(selected_stock):
     )
 
     # Scatter plot for daily low prices with regression line
-    model_low, predictions_low = perform_regression(df, 'Low')
+    model_low, predictions_low = perform_linear_regression(df, 'Low')
     fig_low = px.scatter(df, x=df.index, y='Low', title=f'{selected_stock} Daily Low Prices')
     fig_low.add_scatter(x=df.index, y=predictions_low, mode='lines', name='Regression Line')
     fig_low.update_layout(
@@ -234,7 +173,21 @@ def update_graphs(selected_stock):
         legend_title_text='Legend'
     )
 
-    return fig_open_close, fig_volume, fig_high, fig_low
+    # Perform multiple linear regression
+    model_multiple, predictions_multiple = perform_multiple_regression(df)
+
+    # Regression graph for open, high, low, and close prices
+    fig_regression = go.Figure()
+    fig_regression.add_trace(go.Scatter(x=df.index, y=df['Close'], mode='markers', name='Actual Close'))
+    fig_regression.add_trace(go.Scatter(x=df.index, y=predictions_multiple, mode='lines', name='Predicted Close'))
+    fig_regression.update_layout(
+        title=f'{selected_stock} Multiple Linear Regression (Open, High, Low -> Close)',
+        xaxis_title='Date',
+        yaxis_title='Price (USD)',
+        legend_title_text='Legend'
+    )
+
+    return fig_open_close, fig_volume, fig_high, fig_low, fig_regression
 
 
 # Run the app
