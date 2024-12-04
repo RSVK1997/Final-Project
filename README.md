@@ -1,8 +1,3 @@
-<<<<<<< Updated upstream
-# Final-Project
-
-=======
->>>>>>> Stashed changes
 # Stock Market Dashboard
 
 This project is a Stock Market Dashboard built using Dash and Plotly. The dashboard allows users to visualize stock data for multiple companies, including IBM, Apple, Google, Nvidia, and Microsoft. The dashboard displays various graphs such as open and close prices, trading volume, daily high prices, and daily low prices.
@@ -19,7 +14,6 @@ This project is a Stock Market Dashboard built using Dash and Plotly. The dashbo
 
 Follow these steps to set up the project on your local machine:
 
-<<<<<<< Updated upstream
 1. *Clone the repository:*
 
     bash
@@ -40,28 +34,6 @@ Follow these steps to set up the project on your local machine:
 
 - main.py: The main application file that contains the Dash app and callbacks.
 - *.csv: The CSV files with stock data.
-=======
-1. **Clone the repository:**
-
-    ```bash
-    git clone https://github.com/RSVK1997/Final-Project.git
-    cd Final-Project
-    ```
-2. **Install the required dependencies:**
-
-3. **Run the application:**
-
-4. **Open your web browser and navigate to:**
-
-    ```
-    http://127.0.0.1:8050/
-    ```
-
-## Project Structure
-
-- `main.py`: The main application file that contains the Dash app and callbacks.
-- `*.csv`: The CSV files with stock data.
->>>>>>> Stashed changes
 
 ## Data Source
 
@@ -72,9 +44,4 @@ The stock data is fetched from the Alpha Vantage API. If the API call fails or r
 - PyCharm - The Python IDE for Professional Developers.
 - Dash - A Python framework for building analytical web applications.
 - Plotly - A graphing library for making interactive, publication-quality graphs.
-<<<<<<< Updated upstream
 - Alpha Vantage - A provider of free APIs for real-time and historical data on stocks.
-=======
-- Alpha Vantage - A provider of free APIs for real-time and historical data on stocks.
-
->>>>>>> Stashed changes
