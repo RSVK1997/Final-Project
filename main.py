@@ -10,6 +10,16 @@ import os
 
 # Function to fetch stock data from Alpha Vantage API
 def fetch_stock_data(api_key, symbol):
+    """
+       Fetch stock data from Alpha Vantage API.
+
+       Parameters:
+       api_key (str): Alpha Vantage API key.
+       symbol (str): Stock symbol.
+
+       Returns:
+       dict: JSON response from the API containing stock data.
+       """
     api_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={api_key}'
     response = requests.get(api_url)
     data = response.json()
@@ -17,6 +27,15 @@ def fetch_stock_data(api_key, symbol):
 
 # Function to clean and process the data
 def clean_data(data):
+    """
+      Clean and process the stock data.
+
+      Parameters:
+      data (dict): JSON response from the API containing stock data.
+
+      Returns:
+      DataFrame: Cleaned and processed stock data.
+      """
     time_series = data['Time Series (Daily)']
     df = pd.DataFrame.from_dict(time_series, orient='index')
     df = df.rename(columns={
@@ -25,33 +44,70 @@ def clean_data(data):
         '3. low': 'low',
         '4. close': 'close',
         '5. volume': 'volume'
-    })
+         })
     df.index = pd.to_datetime(df.index)
     df = df.astype(float)
     return df
 
 # Function to save data to a file
 def save_data_to_file(df, filename):
+    """
+    Save stock data to a CSV file.
+
+    Parameters:
+    df (DataFrame): Stock data.
+    filename (str): Name of the file to save the data.
+    """
     df.to_csv(filename, index=False)
 
 # Function to load data from a file
 def load_data_from_file(filename):
+    """
+       Load stock data from a CSV file.
+
+       Parameters:
+       filename (str): Name of the file to load the data from.
+
+       Returns:
+       DataFrame: Loaded stock data.
+       """
     if os.path.exists(filename):
         return pd.read_csv(filename, parse_dates=True)
     return None
 
 # Function to get stock data and save to local file
 def get_stock_data(api_key, symbol):
+    """
+    Get stock data and save it to a local file.
+
+    Parameters:
+    api_key (str): Alpha Vantage API key.
+    symbol (str): Stock symbol.
+
+    Returns:
+    DataFrame: Cleaned and processed stock data.
+    """
     filename = f'{symbol}_data.csv'
-    df = load_data_from_file(filename)
-    if df is None:
-        stock_data = fetch_stock_data(api_key, symbol)
-        df = clean_data(stock_data)
-        save_data_to_file(df, filename)
+    # df = load_data_from_file(filename)
+    # print(symbol, "df", df)
+    # if df is None:
+    stock_data = fetch_stock_data(api_key, symbol)
+    df = clean_data(stock_data)
+    save_data_to_file(df, filename)
     return df
 
 # Function to perform regression analysis and add regression line to the graph
 def perform_regression(df):
+    """
+    Perform regression analysis and add regression line to the graph.
+
+    Parameters:
+    df (DataFrame): Stock data.
+
+    Returns:
+    model: Regression model.
+    predictions: Predicted values from the regression model.
+    """
     df['timestamp_ordinal'] = df.index.map(pd.Timestamp.toordinal)
     X = sm.add_constant(df['timestamp_ordinal'])
     y = df['close']
@@ -63,12 +119,21 @@ def perform_regression(df):
 
 # Function to perform forecast using Exponential Smoothing
 def perform_forecast(df):
+    """
+        Perform forecast using Exponential Smoothing.
+
+        Parameters:
+        df (DataFrame): Stock data.
+
+        Returns:
+        Series: Forecasted values.
+        """
     model = ExponentialSmoothing(df['close'], trend='add', seasonal=None).fit()
     forecast = model.forecast(steps=30)
     return forecast
 
 # Fetch and clean data for multiple stocks
-api_key = 'your_api_key_here'  # Replace with your Alpha Vantage API key
+api_key = '2ZYMISYN89KDZ6CX'  # Replace with your Alpha Vantage API key
 symbols = ['IBM', 'AAPL', 'GOOGL']  # List of stock symbols to analyze
 data_frames = {symbol: get_stock_data(api_key, symbol) for symbol in symbols}
 
@@ -97,6 +162,16 @@ app.layout = html.Div([
     [Input('stock-dropdown', 'value')]
 )
 def update_graphs(selected_stock):
+    """
+        Update graphs based on selected stock.
+
+        Parameters:
+        selected_stock (str): Selected stock symbol.
+
+        Returns:
+        fig_price: Line graph for stock prices with regression line.
+        fig_volume: Bar graph for trading volume.
+        """
     df = data_frames[selected_stock]
 
     # Perform regression analysis
@@ -118,4 +193,13 @@ def update_graphs(selected_stock):
 
 # Run the app
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=False)
+
+help(fetch_stock_data)
+help(clean_data)
+help(save_data_to_file)
+help(load_data_from_file)
+help(get_stock_data)
+help(perform_regression)
+help(perform_forecast)
+help(update_graphs)
